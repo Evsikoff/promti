@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Объясни фразу ИИ</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Markdown renderer -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+
+  <!-- Yandex Games SDK -->
+  <script src="https://yandex.ru/games/sdk/v2"></script>
+
+  <script>
+    // ── Block context menu (right-click + long-tap on mobile) ──
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // ── Block text selection via mouse / drag of images ──
+    document.addEventListener('selectstart', e => {
+      if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('dragstart', e => e.preventDefault());
+
+    // ── Prevent pull-to-refresh on mobile (iOS Safari needs JS) ──
+    let _touchStartY = 0;
+    document.addEventListener('touchstart', e => {
+      _touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    document.addEventListener('touchmove', e => {
+      const dy = e.touches[0].clientY - _touchStartY;
+      if (dy > 0 && (window.scrollY === 0 || document.documentElement.scrollTop === 0)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  </script>
+</head>
+<body>
+
+<div id="game-container">
+
+  <!-- ── Главный заголовок ── -->
+  <h1 id="main-title">Объясни фразу ИИ</h1>
+  <div id="level-indicator">Уровень 1</div>
+
+  <!-- ══════════════════════════════════════════
+       ДОСКА 1 — зелёная, цвет 1
+       ══════════════════════════════════════════ -->
+  <div class="board board-1" id="board-1">
+    <h2 class="board-title">Заставь ИИ написать следующую фразу</h2>
+
+    <!-- Белый лист бумаги на скотче -->
+    <div class="paper-container">
+      <div class="white-paper">
+        <span id="target-phrase">Загрузка…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       ДОСКА 2 — синяя, цвет 2
+       ══════════════════════════════════════════ -->
+  <div class="board board-2" id="board-2">
+    <h2 class="board-title">Не используй следующие комбинации букв</h2>
+
+    <!-- Красные карточки запрещённых корней -->
+    <div class="forbidden-words-container" id="forbidden-container"></div>
+  </div>
+
+  <!-- Кнопки управления запретами -->
+  <div class="btn-row">
+    <button class="btn btn-video" id="btn-remove-restriction">
+      Убрать запрет 🎬
+    </button>
+    <button class="btn btn-cancel hidden" id="btn-cancel-selection">
+      Отмена
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       ВВОД ПРОМТА
+       ══════════════════════════════════════════ -->
+  <div class="input-section">
+    <textarea
+      id="prompt-textarea"
+      class="prompt-textarea"
+      placeholder="Введите ваш промт здесь…"
+      rows="5"
+    ></textarea>
+
+    <div id="validation-msg" class="validation-message"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-send-prompt" disabled>
+        Отправить Prompt
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       ОТВЕТ НЕЙРОСЕТИ
+       ══════════════════════════════════════════ -->
+  <div class="response-section">
+    <div class="response-box" id="response-box">
+      <span class="placeholder-text">Ответ нейросети появится здесь</span>
+    </div>
+
+    <!-- Кнопки результата -->
+    <div class="result-btns hidden" id="result-btns">
+      <button class="btn btn-video hidden" id="btn-retry">
+        Попробовать ещё раз 🎬
+      </button>
+      <button class="btn btn-success hidden" id="btn-next-word">
+        Перейти к следующему слову →
+      </button>
+    </div>
+  </div>
+
+</div><!-- #game-container -->
+
+<!-- ══════════════════════════════════════════
+     IAP OVERLAY — блокировка каждые 10 уровней
+     ══════════════════════════════════════════ -->
+<div class="overlay hidden" id="iap-overlay">
+  <div class="iap-modal">
+    <span class="trophy">🏆</span>
+    <h2>Поздравляем!</h2>
+    <p>Вы прошли 10 фраз!</p>
+    <p>Чтобы продолжить игру, купите ещё 10 новых фраз:</p>
+    <div class="price">90 ₽</div>
+    <button class="btn btn-buy" id="btn-buy">Купить</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LOADING OVERLAY — скрывает UI до полной загрузки
+     ══════════════════════════════════════════ -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="loading-content">
+    <div class="loading-title">Объясни фразу ИИ</div>
+    <div class="spinner-dots loading-dots">
+      <div class="spinner-dot"></div>
+      <div class="spinner-dot"></div>
+      <div class="spinner-dot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Data & logic -->
+<script src="data.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
