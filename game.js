@@ -415,15 +415,28 @@ class PromtiGame {
     }
   }
 
-  _checkPhraseInResponse(response) {
-    // е and ё already unified by _normalize
-    return this._normalize(response)
-      .includes(this._normalize(this.currentPhrase.phrase));
+  // Normalize a single word: lowercase + ё→е (spaces not stripped — used for word-level checks)
+  _normalizeWord(word) {
+    return word.toLowerCase().replace(/ё/g, 'е');
   }
 
-  // Build a regex that matches the phrase with е/ё interchangeable (case-insensitive)
-  _buildPhraseRegex(phrase) {
-    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Split phrase into words and check each one is present anywhere in the response (order-agnostic)
+  _checkPhraseInResponse(response) {
+    const normResponse = this._normalizeWord(response);
+    return this._phraseWords().every(w => normResponse.includes(w));
+  }
+
+  // Returns normalized individual words of the current phrase
+  _phraseWords() {
+    return this.currentPhrase.phrase
+      .split(/\s+/)
+      .filter(w => w.length > 0)
+      .map(w => this._normalizeWord(w));
+  }
+
+  // Build a regex for one word with е/ё interchangeable (case-insensitive)
+  _buildWordRegex(word) {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const pattern = escaped.replace(/[её]/gi, '[еёЕЁ]');
     return new RegExp(pattern, 'gi');
   }
@@ -439,26 +452,29 @@ class PromtiGame {
     }
   }
 
-  // Walk only text nodes inside container and highlight the target phrase
+  // Highlight each word of the target phrase independently in the DOM (order-agnostic)
   _highlightPhraseInDOM(container) {
-    const regex = this._buildPhraseRegex(this.currentPhrase.phrase);
+    const words = this.currentPhrase.phrase.split(/\s+/).filter(w => w.length > 0);
 
-    const walker    = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
-    const textNodes = [];
-    let node;
-    while ((node = walker.nextNode())) textNodes.push(node);
+    words.forEach(word => {
+      const regex    = this._buildWordRegex(word);
+      const walker   = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+      const nodes    = [];
+      let node;
+      while ((node = walker.nextNode())) nodes.push(node);
 
-    textNodes.forEach(textNode => {
-      regex.lastIndex = 0;
-      if (!regex.test(textNode.textContent)) return;
-      regex.lastIndex = 0;
+      nodes.forEach(textNode => {
+        regex.lastIndex = 0;
+        if (!regex.test(textNode.textContent)) return;
+        regex.lastIndex = 0;
 
-      const wrapper = document.createElement('span');
-      wrapper.innerHTML = textNode.textContent.replace(
-        regex,
-        m => `<mark class="phrase-highlight">${m}</mark>`
-      );
-      textNode.parentNode.replaceChild(wrapper, textNode);
+        const wrapper = document.createElement('span');
+        wrapper.innerHTML = textNode.textContent.replace(
+          regex,
+          m => `<mark class="phrase-highlight">${m}</mark>`
+        );
+        textNode.parentNode.replaceChild(wrapper, textNode);
+      });
     });
   }
 
