@@ -133,6 +133,16 @@ class PromtiGame {
       // Init payments
       try {
         this.payments = await this.ysdk.getPayments({ signed: true });
+        // Consume any unprocessed purchases (e.g. after network failure)
+        const pending = await this.payments.getPurchases();
+        for (const purchase of pending) {
+          if (purchase.productID === ENERGY_IAP_ID) {
+            this.energy += ENERGY_IAP_AMOUNT;
+            this._saveProgress();
+            await this.payments.consumePurchase(purchase.purchaseToken);
+          }
+        }
+        if (pending.length) this._updateStatsPanel();
       } catch (e) {
         console.warn('[promti] Payments unavailable:', e.message);
       }
